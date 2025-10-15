@@ -15,10 +15,12 @@
             background-color: #121212;
             color: #e0e0e0;
             display: flex;
+            flex-direction: column; /* للسماح بالفوتر في الأسفل */
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding: 20px 0;
         }
         .container {
             background-color: #1e1e1e;
@@ -40,7 +42,7 @@
             color: #a0a0a0;
             font-size: 1.1em;
         }
-        #uploadButton {
+        #uploadButton, #copyButton {
             background-color: transparent;
             color: #00ffff;
             border: 2px solid #00ffff;
@@ -50,8 +52,9 @@
             font-size: 16px;
             font-family: 'Cairo', sans-serif;
             transition: all 0.3s ease;
+            margin: 5px;
         }
-        #uploadButton:hover {
+        #uploadButton:hover, #copyButton:hover {
             background-color: #00ffff;
             color: #121212;
             box-shadow: 0 0 20px #00ffff;
@@ -77,6 +80,17 @@
             color: #00ffff;
             font-weight: bold;
         }
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .footer {
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -94,16 +108,24 @@
         </div>
 
         <div class="result-container">
-            <h2>الهمسات المكتوبة:</h2>
+            <div class="result-header">
+                <h2>الهمسات المكتوبة:</h2>
+                <button id="copyButton" style="display: none;">نسخ النص</button>
+            </div>
             <div id="result" class="result-box">
                 <p>... بانتظار الإشارة ...</p>
             </div>
         </div>
     </div>
 
+    <div class="footer">
+        <p>تم تطويره بواسطة فاروق الصالح</p>
+    </div>
+
     <script>
         // === كود البرمجة (JavaScript) ===
         const uploadButton = document.getElementById('uploadButton');
+        const copyButton = document.getElementById('copyButton');
         const fileInput = document.getElementById('fileInput');
         const resultDiv = document.getElementById('result');
         const statusDiv = document.getElementById('status');
@@ -111,8 +133,16 @@
         const ASSEMBLYAI_API_KEY = '3c44007830ef4c3397cfb96cbbe8f3c6';
         const ASSEMBLYAI_API_URL = 'https://api.assemblyai.com/v2';
 
-        uploadButton.addEventListener('click', ( ) => {
-            fileInput.click(); 
+        uploadButton.addEventListener('click', ( ) => fileInput.click());
+
+        copyButton.addEventListener('click', () => {
+            const textToCopy = resultDiv.innerText;
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                copyButton.textContent = 'تم النسخ!';
+                setTimeout(() => { copyButton.textContent = 'نسخ النص'; }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
         });
 
         fileInput.addEventListener('change', async () => {
@@ -121,38 +151,31 @@
 
             statusDiv.textContent = 'جاري رفع الملف...';
             resultDiv.innerHTML = '<p>... نستمع للصدى ...</p>';
+            copyButton.style.display = 'none'; // إخفاء زر النسخ
 
             try {
-                // الخطوة 1: رفع الملف للحصول على رابط
                 const uploadResponse = await fetch(`${ASSEMBLYAI_API_URL}/upload`, {
                     method: 'POST',
-                    headers: {
-                        'authorization': ASSEMBLYAI_API_KEY
-                    },
+                    headers: { 'authorization': ASSEMBLYAI_API_KEY },
                     body: file
                 });
                 const uploadData = await uploadResponse.json();
                 const audioUrl = uploadData.upload_url;
 
-                if (!audioUrl) {
-                    throw new Error('فشل رفع الملف إلى AssemblyAI.');
-                }
-
+                if (!audioUrl) throw new Error('فشل رفع الملف.');
                 statusDiv.textContent = 'تم الرفع، جاري التحليل...';
 
-                // الخطوة 2: إرسال الرابط للتحليل (بدون أي ميزات إضافية)
                 const transcribeResponse = await fetch(`${ASSEMBLYAI_API_URL}/transcript`, {
                     method: 'POST',
                     headers: {
                         'authorization': ASSEMBLYAI_API_KEY,
                         'content-type': 'application/json'
                     },
-                    body: JSON.stringify({ audio_url: audioUrl, language_code: 'ar' })
+                    body: JSON.stringify({ audio_url: audioUrl, language_detection: true }) // تفعيل اكتشاف اللغة
                 });
                 const transcribeData = await transcribeResponse.json();
                 const transcriptId = transcribeData.id;
 
-                // الخطوة 3: انتظار اكتمال التحليل
                 statusDiv.textContent = 'التحليل الأساسي قيد التنفيذ...';
                 while (true) {
                     const pollResponse = await fetch(`${ASSEMBLYAI_API_URL}/transcript/${transcriptId}`, {
@@ -162,10 +185,12 @@
 
                     if (pollData.status === 'completed') {
                         resultDiv.innerHTML = `<p>${pollData.text}</p>`;
-                        statusDiv.textContent = 'اكتمل استخراج النص!';
+                        const lang = pollData.language_code === 'ar' ? 'العربية' : pollData.language_code;
+                        statusDiv.textContent = `اكتمل استخراج النص! (اللغة: ${lang})`;
+                        copyButton.style.display = 'inline-block'; // إظهار زر النسخ
                         break;
                     } else if (pollData.status === 'failed') {
-                        throw new Error('فشل تحليل الملف في AssemblyAI.');
+                        throw new Error('فشل تحليل الملف.');
                     }
                     await new Promise(resolve => setTimeout(resolve, 3000));
                 }
