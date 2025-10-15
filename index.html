@@ -13,17 +13,14 @@
             --primary-color: #00ffff; --background-color: #121212; --surface-color: #1e1e1e;
             --text-color: #e0e0e0; --subtle-text-color: #a0a0a0; --success-color: #00ff7f;
         }
-        * {
-            box-sizing: border-box; /* *** IMPROVEMENT: Better box model for all elements *** */
-        }
+        * { box-sizing: border-box; }
         body {
             font-family: 'Cairo', sans-serif; background-color: var(--background-color ); color: var(--text-color);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            min-height: 100vh; margin: 0; padding: 20px 10px; /* *** IMPROVEMENT: Added padding for small screens *** */
+            min-height: 100vh; margin: 0; padding: 20px 10px;
         }
         .container {
-            background-color: var(--surface-color); padding: 30px 25px; /* *** IMPROVEMENT: Adjusted padding *** */
-            border-radius: 15px;
+            background-color: var(--surface-color); padding: 30px 25px; border-radius: 15px;
             box-shadow: 0 8px 25px rgba(0, 255, 255, 0.1); border: 1px solid #00ffff30;
             text-align: center; width: 100%; max-width: 700px;
         }
@@ -44,7 +41,7 @@
         .result-box {
             margin-top: 15px; padding: 20px; border: 1px solid #333; border-radius: 10px;
             background-color: #101010; text-align: right; min-height: 150px; color: #ffffff;
-            font-size: 1.1em; line-height: 1.8; white-space: pre-wrap; /* *** IMPROVEMENT: Adjusted font size for mobile *** */
+            font-size: 1.1em; line-height: 1.8; white-space: pre-wrap;
         }
         .result-header { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
         .footer { margin-top: 40px; color: #666; font-size: 0.9em; }
@@ -71,18 +68,13 @@
 
         <div id="result-buttons" style="display: none;">
             <button id="copyButton" class="button">نسخ النص</button>
-            <button id="summarizeButton" class="button">لخص النص</button>
             <button id="clearButton" class="button">تحليل ملف جديد</button>
         </div>
 
         <div class="result-container">
-            <div id="result-header" class="result-header" style="display: none;">
-                <h2>الهمسات المكتوبة:</h2>
-            </div>
+            <div id="result-header" class="result-header" style="display: none;"><h2>الهمسات المكتوبة:</h2></div>
             <div id="result" class="result-box" style="display: none;"></div>
-            <div id="summary-header" class="result-header" style="display: none;">
-                <h2>الملخص:</h2>
-            </div>
+            <div id="summary-header" class="result-header" style="display: none;"><h2>الملخص:</h2></div>
             <div id="summary" class="result-box" style="display: none;"></div>
         </div>
     </div>
@@ -98,10 +90,10 @@
         const elements = {
             status: document.getElementById('status' ), fileInput: document.getElementById('fileInput'),
             uploadButton: document.getElementById('uploadButton'), copyButton: document.getElementById('copyButton'),
-            summarizeButton: document.getElementById('summarizeButton'), clearButton: document.getElementById('clearButton'),
-            initialButtons: document.getElementById('initial-buttons'), resultButtons: document.getElementById('result-buttons'),
-            resultHeader: document.getElementById('result-header'), resultDiv: document.getElementById('result'),
-            summaryHeader: document.getElementById('summary-header'), summaryDiv: document.getElementById('summary'),
+            clearButton: document.getElementById('clearButton'), initialButtons: document.getElementById('initial-buttons'),
+            resultButtons: document.getElementById('result-buttons'), resultHeader: document.getElementById('result-header'),
+            resultDiv: document.getElementById('result'), summaryHeader: document.getElementById('summary-header'),
+            summaryDiv: document.getElementById('summary'),
         };
 
         let fullText = '';
@@ -110,7 +102,6 @@
         elements.fileInput.addEventListener('change', handleFileSelect);
         elements.copyButton.addEventListener('click', copyToClipboard);
         elements.clearButton.addEventListener('click', resetUI);
-        elements.summarizeButton.addEventListener('click', handleSummarization);
 
         function setStatus(text, showSpinner = false) {
             elements.status.innerHTML = `${text} ${showSpinner ? '<div class="spinner"></div>' : ''}`;
@@ -137,9 +128,7 @@
                     element.innerHTML += text.charAt(i);
                     i++;
                     setTimeout(type, 20);
-                } else {
-                    onComplete();
-                }
+                } else { onComplete(); }
             }
             type();
         }
@@ -152,7 +141,7 @@
             setStatus(`جاري رفع الملف: ${file.name} (${fileSize} MB)`, true);
             try {
                 const audioUrl = await uploadFile(file);
-                setStatus('تم الرفع، جاري التحليل الأساسي...', true);
+                setStatus('تم الرفع، جاري التحليل والتلخيص...', true);
                 const transcriptId = await requestTranscription(audioUrl);
                 pollForCompletion(transcriptId);
             } catch (error) {
@@ -171,10 +160,18 @@
         }
 
         async function requestTranscription(audioUrl) {
+            // *** THIS IS THE CORRECTED PART ***
+            // We request summarization along with transcription from the start
             const response = await fetch(`${ASSEMBLYAI_API_URL}/transcript`, {
                 method: 'POST',
                 headers: { 'authorization': ASSEMBLYAI_API_KEY, 'content-type': 'application/json' },
-                body: JSON.stringify({ audio_url: audioUrl, language_detection: true })
+                body: JSON.stringify({
+                    audio_url: audioUrl,
+                    language_detection: true,
+                    summarization: true, // Enable summarization here
+                    summary_model: 'informative',
+                    summary_type: 'bullets'
+                })
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
@@ -191,11 +188,19 @@
                     fullText = data.text;
                     const lang = data.language_code === 'ar' ? 'العربية' : data.language_code;
                     setStatus(`اكتمل! (اللغة: ${lang})`);
+                    
                     elements.resultHeader.style.display = 'block';
                     elements.resultDiv.style.display = 'block';
                     typeWriter(elements.resultDiv, fullText, () => {
                         elements.resultButtons.style.display = 'block';
                     });
+
+                    // Display summary if it exists
+                    if (data.summary) {
+                        elements.summaryHeader.style.display = 'block';
+                        elements.summaryDiv.style.display = 'block';
+                        typeWriter(elements.summaryDiv, data.summary);
+                    }
                     break;
                 } else if (data.status === 'failed') {
                     throw new Error(data.error);
@@ -213,36 +218,6 @@
                     elements.copyButton.classList.remove('success');
                 }, 2000);
             });
-        }
-
-        async function handleSummarization() {
-            if (!fullText) return;
-            setStatus('جاري تلخيص النص...', true);
-            elements.summarizeButton.disabled = true;
-            try {
-                const prompt = `لخص هذا النص باللغة العربية على شكل نقاط واضحة: \n\n${fullText}`;
-                const response = await fetch(`${ASSEMBLYAI_API_URL}/lemur`, {
-                    method: 'POST',
-                    headers: { 'authorization': ASSEMBLYAI_API_KEY, 'content-type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt: prompt,
-                        temperature: 0.2,
-                    })
-                });
-                const data = await response.json();
-                if (data.error) throw new Error(data.error);
-                
-                elements.summaryHeader.style.display = 'block';
-                elements.summaryDiv.style.display = 'block';
-                typeWriter(elements.summaryDiv, data.response);
-                setStatus('اكتمل التلخيص!');
-
-            } catch (error) {
-                console.error('Error:', error);
-                setStatus(`خطأ في التلخيص: ${error.message}`);
-            } finally {
-                elements.summarizeButton.disabled = false;
-            }
         }
     </script>
 </body>
