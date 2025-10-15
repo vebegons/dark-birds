@@ -91,32 +91,23 @@
         const ASSEMBLYAI_API_KEY = '3c44007830ef4c3397cfb96cbbe8f3c6';
         const ASSEMBLYAI_API_URL = 'https://api.assemblyai.com/v2';
 
-        // --- DOM Elements ---
         const elements = {
-            status: document.getElementById('status' ),
-            fileInput: document.getElementById('fileInput'),
-            uploadButton: document.getElementById('uploadButton'),
-            copyButton: document.getElementById('copyButton'),
-            summarizeButton: document.getElementById('summarizeButton'),
-            clearButton: document.getElementById('clearButton'),
-            initialButtons: document.getElementById('initial-buttons'),
-            resultButtons: document.getElementById('result-buttons'),
-            resultHeader: document.getElementById('result-header'),
-            resultDiv: document.getElementById('result'),
-            summaryHeader: document.getElementById('summary-header'),
-            summaryDiv: document.getElementById('summary'),
+            status: document.getElementById('status' ), fileInput: document.getElementById('fileInput'),
+            uploadButton: document.getElementById('uploadButton'), copyButton: document.getElementById('copyButton'),
+            summarizeButton: document.getElementById('summarizeButton'), clearButton: document.getElementById('clearButton'),
+            initialButtons: document.getElementById('initial-buttons'), resultButtons: document.getElementById('result-buttons'),
+            resultHeader: document.getElementById('result-header'), resultDiv: document.getElementById('result'),
+            summaryHeader: document.getElementById('summary-header'), summaryDiv: document.getElementById('summary'),
         };
 
-        let fullText = ''; // To store the full transcript
+        let fullText = '';
 
-        // --- Event Listeners ---
         elements.uploadButton.addEventListener('click', () => elements.fileInput.click());
         elements.fileInput.addEventListener('change', handleFileSelect);
         elements.copyButton.addEventListener('click', copyToClipboard);
         elements.clearButton.addEventListener('click', resetUI);
         elements.summarizeButton.addEventListener('click', handleSummarization);
 
-        // --- UI Functions ---
         function setStatus(text, showSpinner = false) {
             elements.status.innerHTML = `${text} ${showSpinner ? '<div class="spinner"></div>' : ''}`;
         }
@@ -141,7 +132,7 @@
                 if (i < text.length) {
                     element.innerHTML += text.charAt(i);
                     i++;
-                    setTimeout(type, 20); // Adjust speed here
+                    setTimeout(type, 20);
                 } else {
                     onComplete();
                 }
@@ -149,22 +140,17 @@
             type();
         }
 
-        // --- Core Logic ---
         async function handleFileSelect() {
             const file = elements.fileInput.files[0];
             if (!file) return;
-
             elements.initialButtons.style.display = 'none';
             const fileSize = (file.size / 1024 / 1024).toFixed(2);
             setStatus(`جاري رفع الملف: ${file.name} (${fileSize} MB)`, true);
-
             try {
                 const audioUrl = await uploadFile(file);
                 setStatus('تم الرفع، جاري التحليل الأساسي...', true);
-                
                 const transcriptId = await requestTranscription(audioUrl);
                 pollForCompletion(transcriptId);
-
             } catch (error) {
                 console.error('Error:', error);
                 setStatus(`خطأ: ${error.message}`);
@@ -201,7 +187,6 @@
                     fullText = data.text;
                     const lang = data.language_code === 'ar' ? 'العربية' : data.language_code;
                     setStatus(`اكتمل! (اللغة: ${lang})`);
-                    
                     elements.resultHeader.style.display = 'block';
                     elements.resultDiv.style.display = 'block';
                     typeWriter(elements.resultDiv, fullText, () => {
@@ -230,16 +215,15 @@
             if (!fullText) return;
             setStatus('جاري تلخيص النص...', true);
             elements.summarizeButton.disabled = true;
-
             try {
+                // *** THIS IS THE CORRECTED PART ***
+                const prompt = `لخص هذا النص باللغة العربية على شكل نقاط واضحة: \n\n${fullText}`;
                 const response = await fetch(`${ASSEMBLYAI_API_URL}/lemur`, {
                     method: 'POST',
                     headers: { 'authorization': ASSEMBLYAI_API_KEY, 'content-type': 'application/json' },
                     body: JSON.stringify({
-                        transcript_ids: [], // Not needed if providing text
-                        context: "لخص النص التالي بشكل موجز.",
-                        text: fullText,
-                        temperature: 0,
+                        prompt: prompt,
+                        temperature: 0.2,
                     })
                 });
                 const data = await response.json();
