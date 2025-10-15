@@ -3,46 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>طيور الظلام - لوحة التحليل</title>
+    <title>طيور الظلام</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        :root {
-            --primary-color: #00ffff; /* Cyan */
-            --background-color: #121212;
-            --surface-color: #1e1e1e;
-            --text-color: #e0e0e0;
-            --subtle-text-color: #a0a0a0;
-        }
+        /* === كود التصميم (CSS ) === */
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: var(--background-color );
-            color: var(--text-color);
+            background-color: #121212;
+            color: #e0e0e0;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding-top: 40px;
         }
         .container {
-            background-color: var(--surface-color);
+            background-color: #1e1e1e;
             padding: 30px 40px;
             border-radius: 15px;
             box-shadow: 0 8px 25px rgba(0, 255, 255, 0.1);
             border: 1px solid #00ffff30;
             text-align: center;
             width: 90%;
-            max-width: 800px;
+            max-width: 600px;
         }
-        .header h1 { color: var(--primary-color); text-shadow: 0 0 10px var(--primary-color); }
-        .header p { color: var(--subtle-text-color); }
+        .header h1 {
+            color: #00ffff;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        .header p {
+            color: #a0a0a0;
+            font-size: 1.1em;
+        }
         #uploadButton {
             background-color: transparent;
-            color: var(--primary-color);
-            border: 2px solid var(--primary-color);
+            color: #00ffff;
+            border: 2px solid #00ffff;
             padding: 12px 30px;
             border-radius: 50px;
             cursor: pointer;
@@ -50,17 +51,32 @@
             font-family: 'Cairo', sans-serif;
             transition: all 0.3s ease;
         }
-        #uploadButton:hover { background-color: var(--primary-color); color: var(--background-color); box-shadow: 0 0 20px var(--primary-color); }
-        .status-box { margin: 20px 0; padding: 10px; background-color: rgba(0, 255, 255, 0.05); border: 1px solid rgba(0, 255, 255, 0.2); border-radius: 5px; color: var(--primary-color); font-weight: bold; }
-        .tabs { display: flex; justify-content: center; border-bottom: 1px solid #333; margin-bottom: 20px; }
-        .tab-button { padding: 10px 20px; cursor: pointer; border: none; background: none; color: var(--subtle-text-color); font-size: 16px; font-family: 'Cairo', sans-serif; }
-        .tab-button.active { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); }
-        .tab-content { display: none; text-align: right; line-height: 1.8; background-color: #101010; padding: 20px; border-radius: 10px; min-height: 150px; }
-        .tab-content.active { display: block; }
-        .results-container { margin-top: 30px; display: none; }
-        .speaker-tag { font-weight: bold; color: var(--primary-color); margin-left: 8px; }
-        .summary-item { padding: 8px 0; border-bottom: 1px solid #2a2a2a; }
-        .summary-item:last-child { border-bottom: none; }
+        #uploadButton:hover {
+            background-color: #00ffff;
+            color: #121212;
+            box-shadow: 0 0 20px #00ffff;
+        }
+        .result-box {
+            margin-top: 15px;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 10px;
+            background-color: #101010;
+            text-align: right;
+            min-height: 150px;
+            color: #ffffff;
+            font-size: 1.2em;
+            line-height: 1.8;
+        }
+        .status-box {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 5px;
+            color: #00ffff;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -77,78 +93,67 @@
             <button id="uploadButton">اختر ملف</button>
         </div>
 
-        <div id="resultsContainer" class="results-container">
-            <div class="tabs">
-                <button class="tab-button active" onclick="openTab(event, 'transcriptTab')">النص الكامل</button>
-                <button class="tab-button" onclick="openTab(event, 'summaryTab')">الملخص</button>
+        <div class="result-container">
+            <h2>الهمسات المكتوبة:</h2>
+            <div id="result" class="result-box">
+                <p>... بانتظار الإشارة ...</p>
             </div>
-
-            <div id="transcriptTab" class="tab-content active"><p>... جاري استخراج النص ...</p></div>
-            <div id="summaryTab" class="tab-content"><p>... جاري إنشاء الملخص ...</p></div>
         </div>
     </div>
 
     <script>
+        // === كود البرمجة (JavaScript) ===
         const uploadButton = document.getElementById('uploadButton');
         const fileInput = document.getElementById('fileInput');
+        const resultDiv = document.getElementById('result');
         const statusDiv = document.getElementById('status');
-        const resultsContainer = document.getElementById('resultsContainer');
-        const transcriptDiv = document.getElementById('transcriptTab');
-        const summaryDiv = document.getElementById('summaryTab');
 
         const ASSEMBLYAI_API_KEY = '3c44007830ef4c3397cfb96cbbe8f3c6';
         const ASSEMBLYAI_API_URL = 'https://api.assemblyai.com/v2';
 
-        function openTab(evt, tabName ) {
-            let i, tabcontent, tablinks;
-            tabcontent = document.getElementsByClassName("tab-content");
-            for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
-            tablinks = document.getElementsByClassName("tab-button");
-            for (i = 0; i < tablinks.length; i++) { tablinks[i].className = tablinks[i].className.replace(" active", ""); }
-            document.getElementById(tabName).style.display = "block";
-            evt.currentTarget.className += " active";
-        }
-
-        uploadButton.addEventListener('click', () => fileInput.click());
+        uploadButton.addEventListener('click', ( ) => {
+            fileInput.click(); 
+        });
 
         fileInput.addEventListener('change', async () => {
             const file = fileInput.files[0];
             if (!file) return;
 
             statusDiv.textContent = 'جاري رفع الملف...';
-            resultsContainer.style.display = 'none';
+            resultDiv.innerHTML = '<p>... نستمع للصدى ...</p>';
 
             try {
+                // الخطوة 1: رفع الملف للحصول على رابط
                 const uploadResponse = await fetch(`${ASSEMBLYAI_API_URL}/upload`, {
                     method: 'POST',
-                    headers: { 'authorization': ASSEMBLYAI_API_KEY },
+                    headers: {
+                        'authorization': ASSEMBLYAI_API_KEY
+                    },
                     body: file
                 });
                 const uploadData = await uploadResponse.json();
                 const audioUrl = uploadData.upload_url;
 
-                if (!audioUrl) throw new Error('فشل رفع الملف.');
-                statusDiv.textContent = 'تم الرفع، جاري طلب التحليل...';
+                if (!audioUrl) {
+                    throw new Error('فشل رفع الملف إلى AssemblyAI.');
+                }
 
+                statusDiv.textContent = 'تم الرفع، جاري التحليل...';
+
+                // الخطوة 2: إرسال الرابط للتحليل (بدون أي ميزات إضافية)
                 const transcribeResponse = await fetch(`${ASSEMBLYAI_API_URL}/transcript`, {
                     method: 'POST',
                     headers: {
                         'authorization': ASSEMBLYAI_API_KEY,
                         'content-type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        audio_url: audioUrl,
-                        language_code: 'ar',
-                        speaker_labels: true,
-                        summarization: true,
-                        summary_model: 'informative',
-                        summary_type: 'bullets'
-                    })
+                    body: JSON.stringify({ audio_url: audioUrl, language_code: 'ar' })
                 });
                 const transcribeData = await transcribeResponse.json();
                 const transcriptId = transcribeData.id;
 
-                statusDiv.textContent = 'التحليل قيد التنفيذ... قد يستغرق بعض الوقت.';
+                // الخطوة 3: انتظار اكتمال التحليل
+                statusDiv.textContent = 'التحليل الأساسي قيد التنفيذ...';
                 while (true) {
                     const pollResponse = await fetch(`${ASSEMBLYAI_API_URL}/transcript/${transcriptId}`, {
                         headers: { 'authorization': ASSEMBLYAI_API_KEY }
@@ -156,17 +161,8 @@
                     const pollData = await pollResponse.json();
 
                     if (pollData.status === 'completed') {
-                        statusDiv.textContent = 'اكتمل التحليل!';
-                        resultsContainer.style.display = 'block';
-                        
-                        let transcriptHTML = '';
-                        pollData.utterances.forEach(utterance => {
-                            transcriptHTML += `<p><span class="speaker-tag">المتحدث ${utterance.speaker}:</span>${utterance.text}</p>`;
-                        });
-                        transcriptDiv.innerHTML = transcriptHTML;
-
-                        summaryDiv.innerHTML = `<div class="summary-item">${pollData.summary.replace(/\n/g, '</div><div class="summary-item">')}</div>`;
-
+                        resultDiv.innerHTML = `<p>${pollData.text}</p>`;
+                        statusDiv.textContent = 'اكتمل استخراج النص!';
                         break;
                     } else if (pollData.status === 'failed') {
                         throw new Error('فشل تحليل الملف في AssemblyAI.');
@@ -177,7 +173,7 @@
             } catch (error) {
                 console.error('Error:', error);
                 statusDiv.textContent = 'حدث خطأ في الطقوس!';
-                resultsContainer.style.display = 'none';
+                resultDiv.innerHTML = `<p>فشل الاتصال بالخادم. تأكد من صحة مفتاح الـ API.</p>`;
             }
         });
     </script>
