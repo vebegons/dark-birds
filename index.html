@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>طيور الظلام - لوحة التحليل</title>
+    <title>طيور الظلام</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
@@ -74,8 +74,6 @@
         <div class="result-container">
             <div id="result-header" class="result-header" style="display: none;"><h2>الهمسات المكتوبة:</h2></div>
             <div id="result" class="result-box" style="display: none;"></div>
-            <div id="summary-header" class="result-header" style="display: none;"><h2>الملخص:</h2></div>
-            <div id="summary" class="result-box" style="display: none;"></div>
         </div>
     </div>
 
@@ -92,8 +90,7 @@
             uploadButton: document.getElementById('uploadButton'), copyButton: document.getElementById('copyButton'),
             clearButton: document.getElementById('clearButton'), initialButtons: document.getElementById('initial-buttons'),
             resultButtons: document.getElementById('result-buttons'), resultHeader: document.getElementById('result-header'),
-            resultDiv: document.getElementById('result'), summaryHeader: document.getElementById('summary-header'),
-            summaryDiv: document.getElementById('summary'),
+            resultDiv: document.getElementById('result'),
         };
 
         let fullText = '';
@@ -112,10 +109,7 @@
             elements.resultButtons.style.display = 'none';
             elements.resultHeader.style.display = 'none';
             elements.resultDiv.style.display = 'none';
-            elements.summaryHeader.style.display = 'none';
-            elements.summaryDiv.style.display = 'none';
             elements.resultDiv.innerHTML = '';
-            elements.summaryDiv.innerHTML = '';
             fullText = '';
             setStatus('اختر ملفًا لبدء التحليل');
         }
@@ -141,7 +135,7 @@
             setStatus(`جاري رفع الملف: ${file.name} (${fileSize} MB)`, true);
             try {
                 const audioUrl = await uploadFile(file);
-                setStatus('تم الرفع، جاري التحليل والتلخيص...', true);
+                setStatus('تم الرفع، جاري التحليل الأساسي...', true);
                 const transcriptId = await requestTranscription(audioUrl);
                 pollForCompletion(transcriptId);
             } catch (error) {
@@ -160,18 +154,10 @@
         }
 
         async function requestTranscription(audioUrl) {
-            // *** THIS IS THE CORRECTED PART ***
-            // We request summarization along with transcription from the start
             const response = await fetch(`${ASSEMBLYAI_API_URL}/transcript`, {
                 method: 'POST',
                 headers: { 'authorization': ASSEMBLYAI_API_KEY, 'content-type': 'application/json' },
-                body: JSON.stringify({
-                    audio_url: audioUrl,
-                    language_detection: true,
-                    summarization: true, // Enable summarization here
-                    summary_model: 'informative',
-                    summary_type: 'bullets'
-                })
+                body: JSON.stringify({ audio_url: audioUrl, language_detection: true })
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
@@ -194,13 +180,6 @@
                     typeWriter(elements.resultDiv, fullText, () => {
                         elements.resultButtons.style.display = 'block';
                     });
-
-                    // Display summary if it exists
-                    if (data.summary) {
-                        elements.summaryHeader.style.display = 'block';
-                        elements.summaryDiv.style.display = 'block';
-                        typeWriter(elements.summaryDiv, data.summary);
-                    }
                     break;
                 } else if (data.status === 'failed') {
                     throw new Error(data.error);
