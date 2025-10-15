@@ -109,51 +109,78 @@
         const statusDiv = document.getElementById('status');
 
         // =================================================================
-        // تم وضع المفتاح الجديد الذي أنشأته للتو
+        // تم وضع مفتاح AssemblyAI الجديد
         // =================================================================
-        const DEEPGRAM_API_KEY = 'be340602bf3147bd869ba5321e19ae932c3ee8c9';
+        const ASSEMBLYAI_API_KEY = '3c44007830ef4c3397cfb96cbbe8f3c6';
         // =================================================================
 
-        uploadButton.addEventListener('click', () => {
+        const ASSEMBLYAI_API_URL = 'https://api.assemblyai.com/v2';
+
+        uploadButton.addEventListener('click', ( ) => {
             fileInput.click(); 
         });
 
-        fileInput.addEventListener('change', () => {
+        fileInput.addEventListener('change', async () => {
             const file = fileInput.files[0];
             if (!file) return;
 
-            statusDiv.textContent = 'جاري استدعاء الأرواح... (المعالجة)';
+            statusDiv.textContent = 'جاري رفع الملف...';
             resultDiv.innerHTML = '<p>... نستمع للصدى ...</p>';
 
-            fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=ar&punctuate=true', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Token ${DEEPGRAM_API_KEY}`,
-                    'Content-Type': file.type
-                },
-                body: file 
-            } )
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('فشل المصادقة أو خطأ في الخادم.');
+            try {
+                // الخطوة 1: رفع الملف للحصول على رابط
+                const uploadResponse = await fetch(`${ASSEMBLYAI_API_URL}/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'authorization': ASSEMBLYAI_API_KEY
+                    },
+                    body: file
+                });
+                const uploadData = await uploadResponse.json();
+                const audioUrl = uploadData.upload_url;
+
+                if (!audioUrl) {
+                    throw new Error('فشل رفع الملف إلى AssemblyAI.');
                 }
-                return response.json();
-            })
-            .then(data => {
-                const transcript = data.results?.channels[0]?.alternatives[0]?.transcript;
-                if (transcript) {
-                    resultDiv.innerHTML = `<p>${transcript}</p>`;
-                    statusDiv.textContent = 'اكتمل الهمس!';
-                } else {
-                    resultDiv.innerHTML = '<p>صمت مطبق... لم يتم العثور على كلمات.</p>';
-                    statusDiv.textContent = 'فشل التحليل';
+
+                statusDiv.textContent = 'تم الرفع، جاري التحليل...';
+
+                // الخطوة 2: إرسال الرابط للتحليل
+                const transcribeResponse = await fetch(`${ASSEMBLYAI_API_URL}/transcript`, {
+                    method: 'POST',
+                    headers: {
+                        'authorization': ASSEMBLYAI_API_KEY,
+                        'content-type': 'application/json'
+                    },
+                    body: JSON.stringify({ audio_url: audioUrl, language_code: 'ar' })
+                });
+                const transcribeData = await transcribeResponse.json();
+                const transcriptId = transcribeData.id;
+
+                // الخطوة 3: انتظار اكتمال التحليل
+                statusDiv.textContent = 'اكتمل التحليل، جاري جلب النص...';
+                while (true) {
+                    const pollResponse = await fetch(`${ASSEMBLYAI_API_URL}/transcript/${transcriptId}`, {
+                        headers: { 'authorization': ASSEMBLYAI_API_KEY }
+                    });
+                    const pollData = await pollResponse.json();
+
+                    if (pollData.status === 'completed') {
+                        resultDiv.innerHTML = `<p>${pollData.text}</p>`;
+                        statusDiv.textContent = 'اكتمل الهمس!';
+                        break;
+                    } else if (pollData.status === 'failed') {
+                        throw new Error('فشل تحليل الملف في AssemblyAI.');
+                    }
+                    // انتظر 3 ثواني قبل المحاولة مرة أخرى
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
-            })
-            .catch(error => {
+
+            } catch (error) {
                 console.error('Error:', error);
                 statusDiv.textContent = 'حدث خطأ في الطقوس!';
-                resultDiv.innerHTML = `<p>فشل الاتصال بالخادم. تأكد من صحة مفتاح الـ API وأن لديك اتصال بالإنترنت.</p>`;
-            });
+                resultDiv.innerHTML = `<p>فشل الاتصال بالخادم. تأكد من صحة مفتاح الـ API.</p>`;
+            }
         });
     </script>
 </body>
