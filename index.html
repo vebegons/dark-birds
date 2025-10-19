@@ -93,6 +93,7 @@
         <!-- Translation Section -->
         <div id="translation-controls">
             <select id="language-select" class="language-select">
+                <option value="ar">العربية</option>
                 <option value="en">الإنجليزية</option>
                 <option value="fr">الفرنسية</option>
                 <option value="de">الألمانية</option>
@@ -237,7 +238,7 @@
                     elements.resultDiv.style.display = 'block';
                     typeWriter(elements.resultDiv, fullText, () => {
                         elements.resultButtons.style.display = 'block';
-                        elements.translationControls.style.display = 'block';
+                        prepareTranslationControls();
                     });
                     break;
                 } else if (data.status === 'failed') {
@@ -245,6 +246,18 @@
                 }
                 await new Promise(resolve => setTimeout(resolve, 3000));
             }
+        }
+        
+        function prepareTranslationControls() {
+            // Show/hide language options based on source language
+            for (const option of elements.languageSelect.options) {
+                option.style.display = (option.value === sourceLang) ? 'none' : 'block';
+            }
+            // Set a default selection that is not the source language
+            if (elements.languageSelect.value === sourceLang) {
+                elements.languageSelect.selectedIndex = (sourceLang === 'ar') ? 1 : 0;
+            }
+            elements.translationControls.style.display = 'block';
         }
 
         function copyToClipboard() {
@@ -304,7 +317,7 @@
                 elements.resultDiv.style.display = 'block';
                 elements.resultDiv.innerHTML = fullText;
                 elements.resultButtons.style.display = 'block';
-                elements.translationControls.style.display = 'block';
+                prepareTranslationControls();
             }
         }
 
