@@ -1,6 +1,0 @@
- fastapi
-uvicorn
-yt-dlp
-deep-translator
-python-multipart
-assemblyai
