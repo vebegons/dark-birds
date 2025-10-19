@@ -58,7 +58,8 @@
         #drop-zone.dragover { border-color: var(--primary-color); background-color: rgba(0, 255, 255, 0.05); }
         .is-desktop #drop-zone-text { display: block; }
         .is-mobile #drop-zone-text { display: none; }
-        #translation-controls { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #333; }
+        #translation-section { display: none; width: 100%; }
+        #translation-controls { margin-top: 20px; padding-top: 20px; border-top: 1px solid #333; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
@@ -91,20 +92,25 @@
         </div>
 
         <!-- Translation Section -->
-        <div id="translation-controls">
-            <select id="language-select" class="language-select">
-                <option value="ar">العربية</option>
-                <option value="en">الإنجليزية</option>
-                <option value="fr">الفرنسية</option>
-                <option value="de">الألمانية</option>
-                <option value="es">الإسبانية</option>
-                <option value="tr">التركية</option>
-            </select>
-            <button id="translateButton" class="button">🌐 ترجمة</button>
-        </div>
-        <div class="result-container">
-            <div id="translation-header" class="result-header" style="display: none;"><h2>الترجمة:</h2></div>
-            <div id="translation-result" class="result-box" style="display: none;"></div>
+        <div id="translation-section">
+            <div id="translation-controls" style="display:none;">
+                <select id="language-select" class="language-select">
+                    <option value="ar">العربية</option>
+                    <option value="en">الإنجليزية</option>
+                    <option value="fr">الفرنسية</option>
+                    <option value="de">الألمانية</option>
+                    <option value="es">الإسبانية</option>
+                    <option value="tr">التركية</option>
+                </select>
+                <button id="translateButton" class="button">🌐 ترجمة</button>
+            </div>
+            <div class="result-container">
+                <div id="translation-header" class="result-header" style="display: none;"><h2>الترجمة:</h2></div>
+                <div id="translation-result" class="result-box" style="display: none;"></div>
+            </div>
+            <div id="translation-result-buttons" style="display: none; margin-top: 10px;">
+                 <button id="copyTranslationButton" class="button">📋 نسخ الترجمة</button>
+            </div>
         </div>
     </div>
 
@@ -123,23 +129,28 @@
             initialView: document.getElementById('initial-view'), resultButtons: document.getElementById('result-buttons'),
             resultHeader: document.getElementById('result-header'), resultDiv: document.getElementById('result'),
             dropZone: document.getElementById('drop-zone'),
+            translationSection: document.getElementById('translation-section'),
             translationControls: document.getElementById('translation-controls'),
             translateButton: document.getElementById('translateButton'),
             languageSelect: document.getElementById('language-select'),
             translationHeader: document.getElementById('translation-header'),
             translationResultDiv: document.getElementById('translation-result'),
+            translationResultButtons: document.getElementById('translation-result-buttons'),
+            copyTranslationButton: document.getElementById('copyTranslationButton'),
         };
 
         let fullText = '';
+        let translatedText = '';
         let sourceLang = 'auto';
 
         // --- Event Listeners ---
         elements.uploadButton.addEventListener('click', () => elements.fileInput.click());
         elements.fileInput.addEventListener('change', () => handleFileSelect(elements.fileInput.files[0]));
-        elements.copyButton.addEventListener('click', copyToClipboard);
+        elements.copyButton.addEventListener('click', () => copyToClipboard(elements.copyButton, fullText, '📋 نسخ النص'));
         elements.downloadButton.addEventListener('click', downloadAsTxt);
         elements.clearButton.addEventListener('click', resetUI);
         elements.translateButton.addEventListener('click', handleTranslation);
+        elements.copyTranslationButton.addEventListener('click', () => copyToClipboard(elements.copyTranslationButton, translatedText, '📋 نسخ الترجمة'));
         
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
             elements.dropZone.addEventListener(e, preventDefaults, false);
@@ -160,12 +171,15 @@
             elements.resultButtons.style.display = 'none';
             elements.resultHeader.style.display = 'none';
             elements.resultDiv.style.display = 'none';
+            elements.translationSection.style.display = 'none';
             elements.translationControls.style.display = 'none';
             elements.translationHeader.style.display = 'none';
             elements.translationResultDiv.style.display = 'none';
+            elements.translationResultButtons.style.display = 'none';
             elements.resultDiv.innerHTML = '';
             elements.translationResultDiv.innerHTML = '';
             fullText = '';
+            translatedText = '';
             localStorage.removeItem('lastTranscript');
             setStatus('اختر ملفًا لبدء التحليل');
         }
@@ -238,6 +252,7 @@
                     elements.resultDiv.style.display = 'block';
                     typeWriter(elements.resultDiv, fullText, () => {
                         elements.resultButtons.style.display = 'block';
+                        elements.translationSection.style.display = 'block';
                         prepareTranslationControls();
                     });
                     break;
@@ -249,24 +264,22 @@
         }
         
         function prepareTranslationControls() {
-            // Show/hide language options based on source language
             for (const option of elements.languageSelect.options) {
                 option.style.display = (option.value === sourceLang) ? 'none' : 'block';
             }
-            // Set a default selection that is not the source language
             if (elements.languageSelect.value === sourceLang) {
                 elements.languageSelect.selectedIndex = (sourceLang === 'ar') ? 1 : 0;
             }
             elements.translationControls.style.display = 'block';
         }
 
-        function copyToClipboard() {
-            navigator.clipboard.writeText(fullText).then(() => {
-                elements.copyButton.innerHTML = '✓ تم النسخ';
-                elements.copyButton.classList.add('success');
+        function copyToClipboard(button, textToCopy, originalText) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                button.innerHTML = '✓ تم النسخ';
+                button.classList.add('success');
                 setTimeout(() => {
-                    elements.copyButton.innerHTML = '📋 نسخ النص';
-                    elements.copyButton.classList.remove('success');
+                    button.innerHTML = originalText;
+                    button.classList.remove('success');
                 }, 2000);
             });
         }
@@ -287,14 +300,17 @@
             if (!fullText) return;
             const targetLang = elements.languageSelect.value;
             setStatus('جاري الترجمة...', true);
+            elements.translationResultButtons.style.display = 'none';
             try {
                 const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(fullText )}`);
                 const data = await response.json();
-                const translatedText = data[0].map(item => item[0]).join('');
+                translatedText = data[0].map(item => item[0]).join('');
                 
                 elements.translationHeader.style.display = 'flex';
                 elements.translationResultDiv.style.display = 'block';
-                typeWriter(elements.translationResultDiv, translatedText);
+                typeWriter(elements.translationResultDiv, translatedText, () => {
+                    elements.translationResultButtons.style.display = 'block';
+                });
                 setStatus('اكتملت الترجمة!');
             } catch (error) {
                 console.error("Translation Error:", error);
@@ -317,6 +333,7 @@
                 elements.resultDiv.style.display = 'block';
                 elements.resultDiv.innerHTML = fullText;
                 elements.resultButtons.style.display = 'block';
+                elements.translationSection.style.display = 'block';
                 prepareTranslationControls();
             }
         }
