@@ -19,7 +19,7 @@
         .footer { margin-top: 40px; color: #666; font-size: 0.9em; }
         .spinner { width: 20px; height: 20px; border: 3px solid rgba(0, 255, 255, 0.3); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; }
         .input-group { display: flex; margin-top: 20px; }
-        .input-group input { flex-grow: 1; padding: 10px; border-radius: 0 50px 50px 0; border: 2px solid var(--primary-color); background: #222; color: white; }
+        .input-group input { flex-grow: 1; padding: 10px; border-radius: 0 50px 50px 0; border: 2px solid var(--primary-color); background: #222; color: white; text-align: right; }
         .input-group button { border-radius: 50px 0 0 50px; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
@@ -66,13 +66,12 @@
     <div class="footer"><p>تم تطويره بواسطة فاروق الصالح</p></div>
 
     <script>
-        // هذا هو عنوان الخادم الذي سنحصل عليه من Render
-        // سنحتاج إلى تحديثه لاحقًا
-        const API_BASE_URL = "YOUR_RENDER_URL_HERE"; 
+        // تم تحديث هذا الرابط
+        const API_BASE_URL = "https://dark-birds.onrender.com"; 
 
         // --- Elements ---
         const elements = {
-            status: document.getElementById('status'), urlInput: document.getElementById('urlInput'),
+            status: document.getElementById('status' ), urlInput: document.getElementById('urlInput'),
             processUrlButton: document.getElementById('processUrlButton'), fileInput: document.getElementById('fileInput'),
             uploadButton: document.getElementById('uploadButton'), resultsSection: document.getElementById('results-section'),
             resultDiv: document.getElementById('result'), copyButton: document.getElementById('copyButton'),
