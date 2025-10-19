@@ -7,12 +7,10 @@ from deep_translator import GoogleTranslator
 import yt_dlp
 
 # --- الإعدادات الأساسية ---
-# ضع مفتاح AssemblyAI الخاص بك هنا
-aai.settings.api_key = "3c44007830ef4c3397cfb96cbbe8f3c6" 
+aai.settings.api_key = "3c44007830ef4c3397cfb96cbbe8f3c6" # مفتاح AssemblyAI
 
 app = FastAPI()
 
-# السماح بالوصول من أي مصدر (مهم لكي تعمل الواجهة الأمامية)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,11 +22,10 @@ app.add_middleware(
 # --- تحميل الواجهة الأمامية ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    # سنقوم بلصق كود الـ HTML هنا لاحقًا
-    # حاليًا، هذا مجرد اختبار
-    return "<h1>الخادم يعمل!</h1>"
+    with open("index.html") as f:
+        return HTMLResponse(content=f.read(), status_code=200)
 
-# --- نقطة نهاية لتحليل الفيديو من رابط (مثل تيك توك) ---
+# --- نقطة نهاية لتحليل الفيديو من رابط ---
 @app.post("/api/process_url")
 async def process_url(url: str = Form(...)):
     try:
@@ -39,7 +36,6 @@ async def process_url(url: str = Form(...)):
             if not audio_url:
                 raise HTTPException(status_code=400, detail="لم يتم العثور على رابط صوت مباشر.")
             
-            # الآن نقوم باستخراج النص من رابط الصوت المباشر
             transcriber = aai.Transcriber()
             transcript = transcriber.transcribe(audio_url, config=aai.TranscriptionConfig(language_detection=True))
 
@@ -74,4 +70,3 @@ async def translate_text(text: str = Form(...), target_lang: str = Form(...)):
         return {"translated_text": translated_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"خطأ في الترجمة: {str(e)}")
-
